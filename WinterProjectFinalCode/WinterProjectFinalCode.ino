@@ -45,7 +45,7 @@ void broadcastLog(String message) {
 void setup() {
   Serial.begin(115200);
   
-  // Start Bluetooth and give your device a custom name!
+  // Start Bluetooth and give device a name
   SerialBT.begin("Asset_Tracker_01"); 
   
   // WAKE UP MPU6050
