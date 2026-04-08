@@ -1,3 +1,67 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h>
+#include "BluetoothSerial.h"
+
+// --- Bluetooth Setup ---
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please update your board manager.
+#endif
+
+BluetoothSerial SerialBT; 
+
+// --- RFID Setup ---
+#define SS_PIN 5
+#define RST_PIN 4
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+// --- Accelerometer Setup ---
+const int MPU_ADDR = 0x68; 
+
+// --- Floor Markers (Your Tags) ---
+byte floor1Tag[4] = {0x90, 0x77, 0x63, 0x20}; 
+byte floor2Tag[4] = {0xE3, 0x94, 0x5B, 0x9F}; 
+
+// --- State Machine Memory ---
+String currentLocation = "now in transit (like between floors)";
+String lastPrintedLocation = "";
+String currentMotion = "Parked";
+
+// --- Stopwatches ---
+unsigned long lastScanTime = 0;
+const int scanCooldown = 1500; 
+unsigned long lastMotionCheck = 0;
+const int motionInterval = 1000; 
+unsigned long parkedStartTime = 0;
+bool isSleeping = false;
+
+// --- Helper Function to send data to BOTH USB and Bluetooth ---
+void broadcastLog(String message) {
+  Serial.println(message);   // Sends to physical USB cable
+  SerialBT.println(message); // Sends wirelessly via Bluetooth
+}
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Start Bluetooth and give device a name
+  SerialBT.begin("Asset_Tracker_01"); 
+  
+  // WAKE UP MPU6050
+  Wire.begin(21, 22); 
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x6B);  
+  Wire.write(0);     
+  Wire.endTransmission(true);
+
+  // START RFID 
+  SPI.begin();
+  rfid.PCD_Init();
+
+  broadcastLog("Tracker Online. Bluetooth Serial Active.");
+  broadcastLog("-------------------------------------------");
+}
+
 void loop() {
   // loop calling dedicated functions
   checkRFIDGate();
